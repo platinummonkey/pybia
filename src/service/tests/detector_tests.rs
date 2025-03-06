@@ -91,14 +91,20 @@ fn test_nested_services() {
         temp.path(),
         "parent/setup.py",
         r#"from setuptools import setup
-        setup(name='parent-service')
+        setup(
+            name='parent-service',
+            version='0.1.0',
+        )
         "#,
     );
     create_file(
         temp.path(),
         "parent/child/setup.py",
         r#"from setuptools import setup
-        setup(name='child-service')
+        setup(
+            name='child-service',
+            version='0.1.0',
+        )
         "#,
     );
     create_file(temp.path(), "parent/src/__init__.py", "");

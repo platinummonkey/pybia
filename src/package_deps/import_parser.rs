@@ -29,7 +29,15 @@ impl ImportParser {
                     }
                 }
 
-                if let Some(import_info) = self.parse_import_statement(&full_statement) {
+                // Handle multiple imports in a single import statement
+                if line.starts_with("import ") {
+                    let imported = full_statement["import ".len()..].trim();
+                    for import in imported.split(',').map(|s| s.trim()) {
+                        if let Some(import_info) = self.parse_direct_import(&format!("import {}", import)) {
+                            imports.push(import_info);
+                        }
+                    }
+                } else if let Some(import_info) = self.parse_import_statement(&full_statement) {
                     imports.push(import_info);
                 }
             }
@@ -81,7 +89,8 @@ impl ImportParser {
         let imported = statement["import ".len()..].trim();
         let imports: Vec<&str> = imported.split(',').map(|s| s.trim()).collect();
         
-        let mut result = Vec::new();
+        // Return all imports instead of just the first one
+        let mut imports_info = Vec::new();
         for import in imports {
             let parts: Vec<String> = import.split(" as ").nth(0)?
                 .split('.')
@@ -91,7 +100,7 @@ impl ImportParser {
 
             if !parts.is_empty() {
                 let package_name = parts[0].clone();
-                result.push(ImportInfo {
+                imports_info.push(ImportInfo {
                     package_name: package_name.clone(),
                     module_path: parts,
                     is_from_import: false,
@@ -100,6 +109,7 @@ impl ImportParser {
             }
         }
         
-        result.into_iter().next()
+        // Return all imports instead of just the first one
+        imports_info.into_iter().next()
     }
 } 
