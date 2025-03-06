@@ -108,4 +108,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Note
 
-This is purely experimental and for fun at this moment. This was entirely developed using dialogue-drive-development with cursor using claude-3.5 & claude-3.7-sonnet.  This note section is the only piece I've actually written by hand.
+This is purely experimental and for fun. This was entirely developed using dialogue-drive-development with cursor using claude-3.5 & claude-3.7-sonnet.  This note section is the only piece I've actually written by hand.
