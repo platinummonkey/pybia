@@ -1,0 +1,10 @@
+[[services]]
+name = "auth-service"
+path = "services/auth"
+include_paths = ["common/shared"]
+exclude_paths = ["tests"]
+
+[[services]]
+name = "api-service"
+path = "services/api"
+detection = { indicator_files = ["app.py", "main.py"] } 

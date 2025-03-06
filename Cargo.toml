@@ -1,0 +1,17 @@
+[package]
+name = "file-watcher"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+notify = "6.1.1"
+structopt = "0.3.26"
+walkdir = "2.4.0"
+toml = "0.8.10"
+semver = "1.0"
+regex = "1.10"
+lazy_static = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.10"
