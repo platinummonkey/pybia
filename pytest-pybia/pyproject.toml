@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytest-pybia"
+version = "0.1.0"
+description = "Pytest plugin to skip tests not impacted by code changes using PyBia"
+readme = "README.md"
+authors = [
+    {name = "Cody Lee", email = "cody.lee@example.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Framework :: Pytest",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+keywords = ["pytest", "ci", "testing", "impact analysis"]
+dependencies = [
+    "pytest>=6.0.0",
+    "subprocess-run>=0.0.8",
+    "pyyaml>=6.0",
+    "toml>=0.10.2",
+]
+
+[project.entry-points.pytest11]
+pybia = "pytest_pybia.plugin"
+
+[project.urls]
+"Homepage" = "https://github.com/platinummonkey/pytest-pybia"
+"Bug Tracker" = "https://github.com/platinummonkey/pytest-pybia/issues" 

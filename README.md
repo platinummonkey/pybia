@@ -1,14 +1,15 @@
-# PyBia - Python Service Dependency Watcher
+# PyBia - Python Build Impact Analysis
 
-PyBia is a file watcher tool designed specifically for Python microservice architectures. It monitors your codebase for changes and intelligently identifies which services are affected by those changes, helping you optimize your development and testing workflows.
+PyBia is a build impact analysis tool designed specifically for Python codebases. It intelligently analyzes your code to determine which parts are affected by changes, helping you optimize CI/CD pipelines and understand the impact of code modifications across your project.
 
 ## Features
 
-- **Service Detection**: Automatically detects Python services in your codebase by identifying setup.py and pyproject.toml files
-- **Dependency Tracking**: Analyzes import statements and dependency files to build a dependency graph between services
-- **File Watching**: Monitors file changes in real-time and identifies affected services
-- **Customizable**: Configure service definitions manually or let PyBia detect them automatically
-- **Command Execution**: Run custom commands when files change
+- **Smart Impact Detection**: Automatically identifies which Python modules, packages, and services are affected by code changes
+- **Dependency Graph Analysis**: Builds a comprehensive dependency graph of your Python codebase
+- **CI Pipeline Optimization**: Only run tests and builds for components affected by changes
+- **Monorepo Support**: Perfect for monorepos with multiple Python services or packages
+- **Real-time Monitoring**: Watch for file changes and instantly determine their impact
+- **Customizable Rules**: Configure detection rules to match your project structure
 
 ## Installation
 
@@ -27,22 +28,45 @@ cargo build --release
 ## Usage
 
 ```bash
-# Watch a directory and run tests when files change
-pybia --paths /path/to/project -- pytest
+# Analyze impact of changes and run tests only for affected components
+pybia --paths /path/to/project -- pytest {affected_services}
 
-# Watch multiple directories
-pybia --paths /path/to/service1 /path/to/service2 -- cargo test
+# Watch multiple directories in a monorepo
+pybia --paths /path/to/monorepo/services --service-format name -- ./run-affected-tests.sh
 
-# Specify a services configuration file
-pybia --paths /path/to/project --services-config services.toml -- make test
+# Integrate with CI using a configuration file
+pybia --paths /path/to/project --services-config ci-services.toml -- make test-affected
 
-# Output affected services in different formats
-pybia --paths /path/to/project --service-format name-path
+# Output affected components for use in other scripts
+pybia --paths /path/to/project --service-format name-path > affected_components.txt
+```
+
+## CI Integration
+
+PyBia excels at optimizing CI/CD pipelines by:
+
+1. Analyzing which components are affected by changes in a pull request
+2. Running tests only for affected components
+3. Building and deploying only what changed
+4. Providing clear impact reports for code reviews
+
+Example GitHub Actions integration:
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Determine affected services
+        run: pybia --paths . --service-format name > affected.txt
+      - name: Run tests for affected services only
+        run: cat affected.txt | xargs -I{} pytest {}
 ```
 
 ## Service Configuration
 
-You can define services explicitly in a TOML configuration file:
+Define your project structure in a TOML configuration file:
 
 ```toml
 [[services]]
@@ -60,17 +84,18 @@ path = "/path/to/api"
 
 PyBia works by:
 
-1. Detecting Python services in your codebase
-2. Analyzing import statements and dependency files to build a dependency graph
-3. Watching for file changes
-4. Determining which services are affected by changes
-5. Running specified commands or outputting affected services
+1. Building a dependency graph of your Python codebase
+2. Analyzing imports, requirements, and package dependencies
+3. Determining the impact radius of code changes
+4. Identifying which components need to be tested or rebuilt
+5. Providing actionable output for CI systems or developers
 
 ## Use Cases
 
-- **Monorepo Development**: Only test services affected by your changes
-- **CI/CD Optimization**: Only build and deploy services that have changed
-- **Dependency Analysis**: Understand the relationships between your services
+- **CI Optimization**: Reduce CI time by up to 90% by only testing what's affected
+- **Change Impact Analysis**: Understand how code changes propagate through your system
+- **Dependency Visualization**: Gain insights into your codebase's structure
+- **Monorepo Management**: Make large Python monorepos manageable and efficient
 
 ## Contributing
 
