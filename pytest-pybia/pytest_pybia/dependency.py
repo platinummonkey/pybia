@@ -7,7 +7,7 @@ This module analyzes Python files to determine their dependencies.
 import ast
 import os
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Optional, Set
 
 
 class DependencyAnalyzer:
@@ -40,7 +40,7 @@ class DependencyAnalyzer:
         Analyze a Python file to determine its imports and dependencies.
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             module_name = self._file_to_module(file_path)
@@ -59,21 +59,11 @@ class DependencyAnalyzer:
             for imp in imports:
                 # Handle relative imports
                 if imp.startswith("."):
-                    parent_module = ".".join(module_name.split(".")[:-1])
-                    if imp.startswith(".."):
-                        # Go up one more level for each additional dot
-                        dots = imp.count(".")
-                        parent_module = ".".join(module_name.split(".")[:-dots])
-                        imp = imp[dots:]
-                    else:
-                        imp = imp[1:]  # Remove the leading dot
-                    
-                    if imp:
-                        full_import = f"{parent_module}.{imp}"
-                    else:
-                        full_import = parent_module
-                else:
-                    full_import = imp
+                    # Relative import
+                    parent_module = self._get_parent_module(module_name)
+                    imp = imp[1:]  # Remove the leading dot
+
+                full_import = f"{parent_module}.{imp}" if imp else parent_module
 
                 dependencies.add(full_import)
 
@@ -95,7 +85,7 @@ class DependencyAnalyzer:
         Extract imports from an AST.
         """
         imports = set()
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for name in node.names:
@@ -110,17 +100,13 @@ class DependencyAnalyzer:
         return imports
 
     def _file_to_module(self, file_path: str) -> Optional[str]:
-        """
-        Convert a file path to a Python module name.
-        """
+        """Convert a file path to a module name."""
         try:
+            # Get relative path from project root
             rel_path = os.path.relpath(file_path, str(self.root_dir))
-            if rel_path.startswith(".."):
-                return None
-                
+
             # Convert path to module
-            module_path = rel_path.replace(".py", "").replace(os.path.sep, ".")
-            return module_path
+            return rel_path.replace(".py", "").replace(os.path.sep, ".")
         except Exception:
             return None
 
@@ -131,25 +117,25 @@ class DependencyAnalyzer:
         # Check if we already know this module
         if module_name in self.module_to_file:
             return self.module_to_file[module_name]
-            
+
         # Try to find the file
         parts = module_name.split(".")
         for i in range(len(parts), 0, -1):
             prefix = ".".join(parts[:i])
             if prefix in self.module_to_file:
                 return self.module_to_file[prefix]
-                
+
         # Try to find the file on disk
         module_path = module_name.replace(".", os.path.sep)
         potential_paths = [
             os.path.join(str(self.root_dir), f"{module_path}.py"),
             os.path.join(str(self.root_dir), module_path, "__init__.py"),
         ]
-        
+
         for path in potential_paths:
             if os.path.exists(path):
                 return path
-                
+
         return None
 
     def get_transitive_dependencies(self, module_names: List[str]) -> Set[str]:
@@ -158,20 +144,20 @@ class DependencyAnalyzer:
         """
         visited = set()
         to_visit = set(module_names)
-        
+
         while to_visit:
             current = to_visit.pop()
             if current in visited:
                 continue
-                
+
             visited.add(current)
-            
+
             # Add dependencies to visit
             if current in self.module_dependencies:
                 for dep in self.module_dependencies[current]:
                     if dep not in visited:
                         to_visit.add(dep)
-                        
+
         return visited
 
     def get_transitive_file_dependencies(self, file_paths: List[str]) -> Set[str]:
@@ -184,17 +170,17 @@ class DependencyAnalyzer:
             module = self.file_to_module.get(file_path)
             if module:
                 modules.append(module)
-                
+
         # Get transitive module dependencies
         dependent_modules = self.get_transitive_dependencies(modules)
-        
+
         # Convert back to files
         dependent_files = set()
         for module in dependent_modules:
             file_path = self.module_to_file.get(module)
             if file_path:
                 dependent_files.add(file_path)
-                
+
         return dependent_files
 
     def get_impacted_modules(self, changed_files: List[str]) -> Set[str]:
@@ -207,13 +193,13 @@ class DependencyAnalyzer:
             module = self.file_to_module.get(file_path)
             if module:
                 changed_modules.add(module)
-                
+
         # Then, find all modules that depend on these modules
         impacted_modules = set(changed_modules)
         for module, deps in self.module_dependencies.items():
             if any(dep in changed_modules for dep in deps):
                 impacted_modules.add(module)
-                
+
         # Get transitive dependencies
         return self.get_transitive_dependencies(list(impacted_modules))
 
@@ -222,12 +208,12 @@ class DependencyAnalyzer:
         Get all files impacted by changes to the given files.
         """
         impacted_modules = self.get_impacted_modules(changed_files)
-        
+
         # Convert modules to files
         impacted_files = set(changed_files)
         for module in impacted_modules:
             file_path = self.module_to_file.get(module)
             if file_path:
                 impacted_files.add(file_path)
-                
-        return impacted_files 
+
+        return impacted_files

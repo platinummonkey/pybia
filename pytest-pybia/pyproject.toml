@@ -30,4 +30,48 @@ pybia = "pytest_pybia.plugin"
 
 [project.urls]
 "Homepage" = "https://github.com/platinummonkey/pytest-pybia"
-"Bug Tracker" = "https://github.com/platinummonkey/pytest-pybia/issues" 
+"Bug Tracker" = "https://github.com/platinummonkey/pytest-pybia/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.3.0",
+    "pre-commit>=3.5.0",
+]
+
+[tool.ruff]
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+# Assume Python 3.7+
+target-version = "py37"
+
+[tool.ruff.lint]
+# Enable Pyflakes ('F'), pycodestyle ('E'), isort ('I'), and more
+select = ["E", "F", "I", "W", "N", "B", "C4", "UP", "S", "BLE", "A", "C", "T", "PT", "RET", "SIM"]
+ignore = [
+    "S101",  # Ignore assert usage in tests
+    "S603",  # Ignore subprocess call security warnings
+    "S607",  # Ignore partial executable path warnings
+    "T201",  # Ignore print statements for now
+    "BLE001",  # Ignore blind exception catches
+    "C901",   # Ignore complex function warnings
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pytest_pybia"]
+
+[tool.ruff.format]
+# Use double quotes for strings.
+quote-style = "double"
+# Indent with spaces, rather than tabs.
+indent-style = "space"
+# Respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow assertions in tests 

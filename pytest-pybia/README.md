@@ -95,4 +95,40 @@ Running 12/45 tests (33 skipped due to no impact)
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Development
+
+### Code Formatting
+
+This project uses [Ruff](https://github.com/astral-sh/ruff) for code formatting and linting. Ruff is a fast Python linter and formatter written in Rust.
+
+To format your code:
+
+```bash
+# Install Ruff
+pip install ruff
+
+# Format code
+ruff format .
+
+# Run linting with auto-fix
+ruff check --fix .
+```
+
+Alternatively, you can use the provided script:
+
+```bash
+./format_code.sh
+```
+
+### Pre-commit Hooks
+
+We use pre-commit hooks to ensure code quality. To set up:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+This will automatically run Ruff before each commit to ensure your code is properly formatted. 

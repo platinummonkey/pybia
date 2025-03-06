@@ -1,15 +1,11 @@
 import os
-import subprocess
-import json
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
+from typing import List
 
 import pytest
 from _pytest.config import Config
 from _pytest.config.argparsing import Parser
-from _pytest.main import Session
-from _pytest.python import Module, Function
-from _pytest.reports import TestReport
+from _pytest.python import Function
 from _pytest.terminal import TerminalReporter
 
 from .impact import ImpactAnalyzer
@@ -27,10 +23,10 @@ class PyBiaPlugin:
         self.show_summary = True
         self.force_all = False
         self.specified_files = None
-        
+
         # Impact analyzer
         self.impact_analyzer = None
-        
+
         # Statistics
         self.total_tests = 0
         self.run_tests = 0
@@ -40,7 +36,7 @@ class PyBiaPlugin:
         """Initialize the plugin with the given root directory."""
         self.impact_analyzer = ImpactAnalyzer(rootdir)
         self.impact_analyzer.scan_codebase()
-        
+
         # Parse specified files if provided
         changed_files = None
         if self.specified_files:
@@ -49,40 +45,31 @@ class PyBiaPlugin:
                 for f in self.specified_files.split(",")
                 if f.strip()
             ]
-        
+
         # Analyze impact
         self.impact_analyzer.analyze_impact(
             config_file=self.config_file,
             changed_files=changed_files,
-            base_commit=self.base_commit if not changed_files else None
+            base_commit=self.base_commit if not changed_files else None,
         )
 
-    def _is_test_impacted(self, item: Function) -> bool:
-        """Determine if a test is impacted by changes."""
-        if self.force_all:
-            return True
-            
-        # Get the module name and file path
+    def is_test_impacted(self, item) -> bool:
+        """
+        Check if a test is impacted by changes.
+        """
+        # Get the module name from the test item
         module_name = item.module.__name__
-        file_path = str(item.path)
-        
-        # Check if the test file itself is impacted
-        if self.impact_analyzer.is_file_impacted(file_path):
-            return True
-            
+
         # Check if the test module is impacted
-        if self.impact_analyzer.is_module_impacted(module_name):
-            return True
-            
-        return False
+        return self.impact_analyzer.is_module_impacted(module_name)
 
     def print_summary(self, tr: TerminalReporter) -> None:
         """Print a summary of the impact analysis."""
         if not self.show_summary:
             return
-            
+
         tr.write_sep("=", "PyBia Impact Summary")
-        
+
         # Show changed files
         changed_files = self.impact_analyzer.changed_files
         tr.write_line(f"Detected changes in {len(changed_files)} files:")
@@ -90,19 +77,25 @@ class PyBiaPlugin:
             tr.write_line(f"  - {os.path.relpath(file, str(tr.config.rootdir))}")
         if len(changed_files) > 5:
             tr.write_line(f"  - ... and {len(changed_files) - 5} more")
-        
+
         # Show impacted services
         tr.write_line("")
-        tr.write_line(f"Impacted services:")
+        tr.write_line("Impacted services:")
         for service_name, service_path in self.impact_analyzer.impacted_services:
-            file_count = sum(1 for f in self.impact_analyzer.impacted_files if f.startswith(service_path))
+            file_count = sum(
+                1
+                for f in self.impact_analyzer.impacted_files
+                if f.startswith(service_path)
+            )
             tr.write_line(f"  - {service_name} ({file_count} files)")
-        
+
         # Show test statistics
         tr.write_line("")
-        tr.write_line(f"Running {self.run_tests}/{self.total_tests} tests "
-                     f"({self.skipped_tests} skipped due to no impact)")
-        
+        tr.write_line(
+            f"Running {self.run_tests}/{self.total_tests} tests "
+            f"({self.skipped_tests} skipped due to no impact)"
+        )
+
         tr.write_sep("=", "")
 
 
@@ -151,10 +144,12 @@ def pytest_addoption(parser: Parser) -> None:
         default=None,
         help="Comma-separated list of files to analyze for impact",
     )
-    
+
     # Add ini options
     parser.addini("pybia_enabled", "Enable PyBia impact analysis", default="false")
-    parser.addini("pybia_base_commit", "Git base commit for comparison", default="HEAD~1")
+    parser.addini(
+        "pybia_base_commit", "Git base commit for comparison", default="HEAD~1"
+    )
     parser.addini("pybia_config_file", "Path to PyBia configuration file")
     parser.addini("pybia_summary", "Show PyBia impact summary", default="true")
 
@@ -163,36 +158,35 @@ def pytest_addoption(parser: Parser) -> None:
 def pytest_configure(config: Config) -> None:
     """Configure the PyBia plugin."""
     plugin = PyBiaPlugin()
-    
+
     # Check if plugin is enabled
     plugin.enabled = (
-        config.getoption("pybia_enabled") or
-        config.getini("pybia_enabled").lower() == "true"
+        config.getoption("pybia_enabled")
+        or config.getini("pybia_enabled").lower() == "true"
     )
-    
+
     if not plugin.enabled:
         return
-    
+
     # Register plugin
     config.pluginmanager.register(plugin, "pybia")
-    
+
     # Get configuration
     plugin.base_commit = (
-        config.getoption("pybia_base_commit") or
-        config.getini("pybia_base_commit") or
-        "HEAD~1"
+        config.getoption("pybia_base_commit")
+        or config.getini("pybia_base_commit")
+        or "HEAD~1"
     )
-    plugin.config_file = (
-        config.getoption("pybia_config_file") or
-        config.getini("pybia_config_file")
+    plugin.config_file = config.getoption("pybia_config_file") or config.getini(
+        "pybia_config_file"
     )
     plugin.show_summary = (
-        config.getoption("pybia_summary") and
-        config.getini("pybia_summary").lower() != "false"
+        config.getoption("pybia_summary")
+        and config.getini("pybia_summary").lower() != "false"
     )
     plugin.force_all = config.getoption("pybia_force_all")
     plugin.specified_files = config.getoption("pybia_files")
-    
+
     # Initialize the plugin
     plugin.initialize(Path(config.rootdir))
 
@@ -203,17 +197,17 @@ def pytest_collection_modifyitems(config: Config, items: List[Function]) -> None
     plugin = config.pluginmanager.get_plugin("pybia")
     if not plugin or not plugin.enabled:
         return
-    
+
     plugin.total_tests = len(items)
-    
+
     if plugin.force_all:
         plugin.run_tests = plugin.total_tests
         plugin.skipped_tests = 0
         return
-    
+
     skip_marker = pytest.mark.skip(reason="Not impacted by changes according to PyBia")
     for item in items:
-        if not plugin._is_test_impacted(item):
+        if not plugin.is_test_impacted(item):
             item.add_marker(skip_marker)
             plugin.skipped_tests += 1
         else:
@@ -221,8 +215,10 @@ def pytest_collection_modifyitems(config: Config, items: List[Function]) -> None
 
 
 @pytest.hookimpl(trylast=True)
-def pytest_terminal_summary(terminalreporter: TerminalReporter, exitstatus: int, config: Config) -> None:
+def pytest_terminal_summary(
+    terminalreporter: TerminalReporter, exitstatus: int, config: Config
+) -> None:
     """Add PyBia impact summary to the terminal report."""
     plugin = config.pluginmanager.get_plugin("pybia")
     if plugin and plugin.enabled:
-        plugin.print_summary(terminalreporter) 
+        plugin.print_summary(terminalreporter)
