@@ -18,29 +18,23 @@ impl ImportParser {
         while i < lines.len() {
             let line = lines[i].trim();
             
-            if line.starts_with("import ") || line.starts_with("from ") {
-                let mut full_statement = line.to_string();
-                
-                // Handle multi-line imports
-                while line.ends_with("\\") || (line.contains("(") && !line.contains(")")) {
-                    i += 1;
-                    if i < lines.len() {
-                        full_statement.push_str(lines[i].trim());
-                    }
-                }
-
-                // Handle multiple imports in a single import statement
-                if line.starts_with("import ") {
-                    let imported = full_statement["import ".len()..].trim();
-                    for import in imported.split(',').map(|s| s.trim()) {
-                        if let Some(import_info) = self.parse_direct_import(&format!("import {}", import)) {
+            if line.starts_with("import ") {
+                let imported = line["import ".len()..].trim();
+                // Handle multiple imports separated by commas
+                for import_part in imported.split(',') {
+                    let import_part = import_part.trim();
+                    if !import_part.is_empty() {
+                        if let Some(import_info) = self.parse_direct_import(&format!("import {}", import_part)) {
                             imports.push(import_info);
                         }
                     }
-                } else if let Some(import_info) = self.parse_import_statement(&full_statement) {
+                }
+            } else if line.starts_with("from ") {
+                if let Some(import_info) = self.parse_from_import(line) {
                     imports.push(import_info);
                 }
             }
+            
             i += 1;
         }
 
@@ -87,29 +81,24 @@ impl ImportParser {
 
     fn parse_direct_import(&self, statement: &str) -> Option<ImportInfo> {
         let imported = statement["import ".len()..].trim();
-        let imports: Vec<&str> = imported.split(',').map(|s| s.trim()).collect();
         
-        // Return all imports instead of just the first one
-        let mut imports_info = Vec::new();
-        for import in imports {
-            let parts: Vec<String> = import.split(" as ").nth(0)?
-                .split('.')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect();
+        // Handle single import with possible "as" alias
+        let parts: Vec<String> = imported.split(" as ").nth(0)?
+            .split('.')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
 
-            if !parts.is_empty() {
-                let package_name = parts[0].clone();
-                imports_info.push(ImportInfo {
-                    package_name: package_name.clone(),
-                    module_path: parts,
-                    is_from_import: false,
-                    imported_names: vec![package_name],
-                });
-            }
+        if !parts.is_empty() {
+            let package_name = parts[0].clone();
+            return Some(ImportInfo {
+                package_name: package_name.clone(),
+                module_path: parts,
+                is_from_import: false,
+                imported_names: vec![package_name],
+            });
         }
         
-        // Return all imports instead of just the first one
-        imports_info.into_iter().next()
+        None
     }
 } 

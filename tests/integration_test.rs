@@ -15,7 +15,12 @@ fn setup_test_project() -> TempDir {
     std::fs::create_dir_all(temp.path().join("service1/src")).unwrap();
     std::fs::write(
         temp.path().join("service1/setup.py"),
-        r#"setup(name='service1')"#,
+        r#"from setuptools import setup
+        setup(
+            name='service1',
+            version='0.1.0',
+        )
+        "#,
     ).unwrap();
     std::fs::write(
         temp.path().join("service1/src/__init__.py"),
@@ -44,17 +49,8 @@ fn setup_test_project() -> TempDir {
 fn test_full_service_detection_and_dependencies() {
     let temp = setup_test_project();
     
-    // Configure services
-    let config = ServiceConfig {
-        name: "service3".to_string(),
-        path: temp.path().join("service3"),
-        include_paths: vec![],
-        exclude_paths: vec![],
-        detection: ServiceDetectionRules::default(),
-    };
-    
-    // Detect services
-    let detector = ServiceDetector::new(vec![config]);
+    // Detect services without any additional configuration
+    let detector = ServiceDetector::new(vec![]);  // Remove the non-existent service3 config
     let services = detector.detect_services(temp.path()).unwrap();
     
     assert_eq!(services.len(), 2);

@@ -89,15 +89,34 @@ impl ServiceDetector {
         
         for line in content.lines() {
             let line = line.trim();
-            if line.contains("name=") {
-                if let Some(name) = line.split('=').nth(1) {
-                    let cleaned_name = name.trim()
-                        .trim_matches(|c| c == '\'' || c == '"' || c == ',')
-                        .trim()
-                        .to_string();
-                    if !cleaned_name.is_empty() {
-                        return Ok(Some(cleaned_name));
-                    }
+            if line.contains("name=") || line.contains("name =") {
+                // Extract the name parameter
+                let name_part = if let Some(idx) = line.find("name=") {
+                    &line[idx + 5..]
+                } else if let Some(idx) = line.find("name =") {
+                    &line[idx + 6..]
+                } else {
+                    continue;
+                };
+                
+                // Handle different formats: name='value', name="value", name=value
+                let cleaned_name = name_part
+                    .trim_start()
+                    .trim_start_matches('(')
+                    .trim_start_matches('\'')
+                    .trim_start_matches('"')
+                    .split(',')
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .trim_end_matches('\'')
+                    .trim_end_matches('"')
+                    .trim_end_matches(')')
+                    .trim_end_matches(',')
+                    .to_string();
+                    
+                if !cleaned_name.is_empty() {
+                    return Ok(Some(cleaned_name));
                 }
             }
         }
