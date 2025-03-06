@@ -2,12 +2,11 @@ use super::models::ImportInfo;
 
 pub struct ImportParser {
     content: String,
-    pos: usize,
 }
 
 impl ImportParser {
     pub fn new(content: String) -> Self {
-        Self { content, pos: 0 }
+        Self { content }
     }
 
     pub fn parse_imports(&mut self) -> Vec<ImportInfo> {
@@ -18,8 +17,8 @@ impl ImportParser {
         while i < lines.len() {
             let line = lines[i].trim();
             
-            if line.starts_with("import ") {
-                let imported = line["import ".len()..].trim();
+            if let Some(stripped) = line.strip_prefix("import ") {
+                let imported = stripped.trim();
                 // Handle multiple imports separated by commas
                 for import_part in imported.split(',') {
                     let import_part = import_part.trim();
@@ -39,14 +38,6 @@ impl ImportParser {
         }
 
         imports
-    }
-
-    fn parse_import_statement(&self, statement: &str) -> Option<ImportInfo> {
-        if statement.starts_with("from ") {
-            self.parse_from_import(statement)
-        } else {
-            self.parse_direct_import(statement)
-        }
     }
 
     fn parse_from_import(&self, statement: &str) -> Option<ImportInfo> {

@@ -16,6 +16,12 @@ pub struct DependencyGraph {
     services: HashMap<String, DetectedService>,
 }
 
+impl Default for DependencyGraph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DependencyGraph {
     pub fn new() -> Self {
         DependencyGraph {
@@ -29,12 +35,12 @@ impl DependencyGraph {
     pub fn add_dependency(&mut self, from: PathBuf, to: PathBuf) {
         // Add direct dependency
         self.deps.entry(from.clone())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(to.clone());
 
         // Add reverse dependency
         self.reverse_deps.entry(to)
-            .or_insert_with(HashSet::new)
+            .or_default()
             .insert(from);
     }
 
@@ -87,7 +93,7 @@ impl DependencyGraph {
 
         for entry in walker {
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "py") {
+            if path.extension().is_some_and(|ext| ext == "py") {
                 if let Ok(content) = fs::read_to_string(path) {
                     // Scan for regular Python imports
                     for line in content.lines() {

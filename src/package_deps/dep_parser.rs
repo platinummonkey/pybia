@@ -68,7 +68,7 @@ impl DependencyParser {
                 let line = line.trim();
                 !line.is_empty() && !line.starts_with('#') && !line.starts_with('-')
             })
-            .filter_map(|line| Self::parse_requirement_line(line))
+            .filter_map(Self::parse_requirement_line)
             .collect()
     }
 

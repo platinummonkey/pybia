@@ -18,6 +18,12 @@ pub struct PackageDependencyManager {
     import_cache: HashMap<PathBuf, Vec<ImportInfo>>,
 }
 
+impl Default for PackageDependencyManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PackageDependencyManager {
     pub fn new() -> Self {
         Self {
@@ -54,7 +60,7 @@ impl PackageDependencyManager {
         for import_info in &imports {
             self.package_usages
                 .entry(import_info.package_name.clone())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(path.to_path_buf());
         }
         
@@ -86,7 +92,7 @@ impl PackageDependencyManager {
     }
 
     pub fn is_python_file(&self, path: &Path) -> bool {
-        path.extension().map_or(false, |ext| ext == "py")
+        path.extension().is_some_and(|ext| ext == "py")
     }
 }
 

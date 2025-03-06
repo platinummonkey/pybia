@@ -150,7 +150,7 @@ impl ServiceDetector {
         Ok(dir.to_path_buf())
     }
 
-    fn is_path_in_existing_service(&self, path: &Path, services: &HashMap<String, DetectedService>) -> bool {
+    fn is_path_in_existing_service(&self, _path: &Path, _services: &HashMap<String, DetectedService>) -> bool {
         // Don't skip nested services
         false
     }

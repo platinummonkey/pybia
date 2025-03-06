@@ -1,4 +1,4 @@
-use semver::{Version, VersionReq};
+use semver::{VersionReq};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
