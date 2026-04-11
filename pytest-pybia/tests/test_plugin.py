@@ -78,8 +78,8 @@ def test_pytest_collection_modifyitems(mock_pybia_plugin_class):
     items = [item1, item2]
 
     # Mock is_test_impacted: True for item1, False for item2
-    mock_plugin_instance.is_test_impacted.side_effect = (
-        lambda item: item.nodeid == "tests/test_file1.py::test_function1"
+    mock_plugin_instance.is_test_impacted.side_effect = lambda item: (
+        item.nodeid == "tests/test_file1.py::test_function1"
     )
 
     # Call the function under test
