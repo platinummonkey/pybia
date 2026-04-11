@@ -10,6 +10,12 @@ from _pytest.terminal import TerminalReporter
 
 from .impact import ImpactAnalyzer
 
+# Internal pluginmanager key for the PyBiaPlugin instance.  The pytest11
+# entry-point already claims the name "pybia" for the module itself, so we
+# use a distinct private key here to avoid the AttributeError that arises
+# when get_plugin("pybia") returns the module rather than the instance.
+_PLUGIN_KEY = "_pybia_plugin"
+
 
 class PyBiaPlugin:
     """
@@ -168,8 +174,9 @@ def pytest_configure(config: Config) -> None:
     if not plugin.enabled:
         return
 
-    # Register plugin
-    config.pluginmanager.register(plugin, "pybia")
+    # Register plugin instance under a distinct name to avoid shadowing the
+    # module-level entry-point registration (which is also keyed as "pybia").
+    config.pluginmanager.register(plugin, _PLUGIN_KEY)
 
     # Get configuration
     plugin.base_commit = (
@@ -194,7 +201,7 @@ def pytest_configure(config: Config) -> None:
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config: Config, items: List[Function]) -> None:
     """Skip tests that aren't impacted by changes."""
-    plugin = config.pluginmanager.get_plugin("pybia")
+    plugin = config.pluginmanager.get_plugin(_PLUGIN_KEY)
     if not plugin or not plugin.enabled:
         return
 
@@ -219,6 +226,6 @@ def pytest_terminal_summary(
     terminalreporter: TerminalReporter, exitstatus: int, config: Config
 ) -> None:
     """Add PyBia impact summary to the terminal report."""
-    plugin = config.pluginmanager.get_plugin("pybia")
+    plugin = config.pluginmanager.get_plugin(_PLUGIN_KEY)
     if plugin and plugin.enabled:
         plugin.print_summary(terminalreporter)

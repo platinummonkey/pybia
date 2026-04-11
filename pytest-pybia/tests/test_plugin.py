@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from pytest_pybia import plugin
+from pytest_pybia.plugin import _PLUGIN_KEY
 
 
 def test_plugin_registered():
@@ -13,47 +14,57 @@ def test_plugin_registered():
 def test_pytest_addoption():
     """Test that the plugin adds the expected options."""
     parser = MagicMock()
+    group = MagicMock()
+    parser.getgroup.return_value = group
     plugin.pytest_addoption(parser)
 
-    # Verify that the parser.addoption method was called with the expected arguments
-    parser.addoption.assert_any_call(
+    # Verify that the group.addoption method was called with the --pybia flag
+    group.addoption.assert_any_call(
         "--pybia",
         action="store_true",
+        dest="pybia_enabled",
+        default=False,
         help="Enable PyBia impact analysis to skip tests not affected by changes",
     )
 
 
-@patch("pytest_pybia.plugin.PyBiaClient")
-def test_pytest_configure(mock_pybia_client):
-    """Test that the plugin configures PyBia correctly."""
+@patch("pytest_pybia.plugin.PyBiaPlugin")
+def test_pytest_configure(mock_pybia_plugin_class):
+    """Test that the plugin configures PyBia correctly when enabled."""
+    mock_plugin_instance = MagicMock()
+    mock_plugin_instance.enabled = True
+    mock_pybia_plugin_class.return_value = mock_plugin_instance
+
     config = MagicMock()
     config.getoption.return_value = True
-    config.getini.return_value = "HEAD~1"
+    config.getini.side_effect = lambda key: {
+        "pybia_enabled": "true",
+        "pybia_base_commit": "HEAD~1",
+        "pybia_config_file": "",
+        "pybia_summary": "true",
+    }.get(key, "")
 
     plugin.pytest_configure(config)
 
-    # Verify that PyBiaClient was initialized
-    mock_pybia_client.assert_called_once()
+    # Verify that PyBiaPlugin was instantiated
+    mock_pybia_plugin_class.assert_called_once()
 
-    # Verify that the config object has a pybia attribute
-    assert hasattr(config, "pybia")
+    # Verify the instance was registered under the internal key
+    config.pluginmanager.register.assert_called_once_with(
+        mock_plugin_instance, _PLUGIN_KEY
+    )
 
 
-@patch("pytest_pybia.plugin.PyBiaClient")
-def test_pytest_collection_modifyitems(mock_pybia_client):
+@patch("pytest_pybia.plugin.PyBiaPlugin")
+def test_pytest_collection_modifyitems(mock_pybia_plugin_class):
     """Test that the plugin modifies the test collection based on PyBia analysis."""
+    mock_plugin_instance = MagicMock()
+    mock_plugin_instance.enabled = True
+    mock_plugin_instance.force_all = False
+    mock_pybia_plugin_class.return_value = mock_plugin_instance
+
     config = MagicMock()
-    config.getoption.return_value = True
-
-    # Mock PyBia client instance
-    mock_client_instance = MagicMock()
-    mock_pybia_client.return_value = mock_client_instance
-
-    # Mock the get_impacted_files method
-    mock_client_instance.get_impacted_files.return_value = [
-        "path/to/file1.py",
-        "path/to/file2.py",
-    ]
+    config.pluginmanager.get_plugin.return_value = mock_plugin_instance
 
     # Create mock test items
     item1 = MagicMock()
@@ -66,16 +77,22 @@ def test_pytest_collection_modifyitems(mock_pybia_client):
 
     items = [item1, item2]
 
-    # Mock the is_test_impacted method to return True for item1 and False for item2
-    mock_client_instance.is_test_impacted.side_effect = (
-        lambda item: item.nodeid == "tests/test_file1.py::test_function1"
+    # Mock is_test_impacted: True for item1, False for item2
+    mock_plugin_instance.is_test_impacted.side_effect = lambda item: (
+        item.nodeid == "tests/test_file1.py::test_function1"
     )
 
     # Call the function under test
     plugin.pytest_collection_modifyitems(config, items)
 
-    # Verify that item2 was marked as skipped
+    # Verify get_plugin used the internal registration key
+    config.pluginmanager.get_plugin.assert_called_with(_PLUGIN_KEY)
+
+    # Verify that item1 (impacted) was NOT marked as skipped
+    item1.add_marker.assert_not_called()
+
+    # Verify that item2 (not impacted) was marked as skipped
     item2.add_marker.assert_called_once()
     args, _ = item2.add_marker.call_args
     assert args[0].name == "skip"
-    assert "not impacted by changes" in args[0].kwargs["reason"]
+    assert "not impacted" in args[0].kwargs["reason"].lower()
